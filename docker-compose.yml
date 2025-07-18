@@ -1,74 +1,60 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
     image: postgres:13
+    container_name: job_postgres
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: new_employee_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      POSTGRES_DB: job_db
     ports:
-      - "5416:5432"
+      - "5411:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
 
   backend:
-    build: ./backend
-    environment:
-      DB_USER: postgres
-      DB_HOST: postgres
-      DB_NAME: new_employee_db
-      DB_PASSWORD: admin123
-      DB_PORT: 5432
-      PORT: 3411
+    build: ./Backend
+    container_name: job_backend
+    restart: always
+    ports:
+      - "3411:3411"
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "3411:3411"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://51.20.65.33:3411/api/jobs"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  job_posts:
-    image: nginx:alpine
-    volumes:
-      - ./Job_Posts:/usr/share/nginx/html
-      - ./nginx-posts.conf:/etc/nginx/conf.d/default.conf
-    ports:
-      - "8034:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://51.20.65.33"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
   job_form:
     image: nginx:alpine
+    container_name: job_form
+    restart: always
+    ports:
+      - "8010:80"
     volumes:
       - ./Job_form:/usr/share/nginx/html
-      - ./nginx-form.conf:/etc/nginx/conf.d/default.conf
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/index.html || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  job_posts:
+    image: nginx:alpine
+    container_name: job_posts
+    restart: always
     ports:
-      - "8035:80"
-    depends_on:
-      backend:
-        condition: service_healthy
+      - "8011:80"
+    volumes:
+      - ./Job_Posts:/usr/share/nginx/html
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/index.html || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 networks:
   default:
     name: job-network
-    driver: bridge
-
-volumes:
-  postgres_data:
