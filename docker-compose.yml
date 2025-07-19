@@ -8,14 +8,18 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: job_db
+      POSTGRES_DB: new_employee_db  # <-- Changed to match backend's expected DB
     ports:
       - "5411:5432"
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d  # Optional if you want to initialize manually
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - jobnet
 
   backend:
     build: ./backend
@@ -26,6 +30,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - jobnet
 
   job_form:
     image: nginx:alpine
@@ -40,6 +46,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - jobnet
 
   job_posts:
     image: nginx:alpine
@@ -48,13 +56,3 @@ services:
     ports:
       - "8011:80"
     volumes:
-      - ./Job_Posts:/usr/share/nginx/html
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/index.html || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-networks:
-  default:
-    name: job-network
